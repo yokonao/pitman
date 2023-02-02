@@ -79,7 +79,7 @@ func (b *Buffer) toTokens() []string {
 var b Buffer
 
 func main() {
-	content, err := os.ReadFile("sample.pdf")
+	content, err := os.ReadFile("samples/sample.pdf")
 	if err != nil {
 		panic(err)
 	}
