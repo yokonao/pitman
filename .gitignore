@@ -15,4 +15,4 @@
 # vendor/
 
 # Test files
-tests/tmp.txt
+tests/tmp*.txt
