@@ -11,8 +11,15 @@ type Tokens struct {
 	current int
 }
 
+func (t *Tokens) isEmpty() bool {
+	return t.current >= len(t.tokens)
+}
+
 func (t *Tokens) readToken() string {
-	// TODO out of range
+	if t.isEmpty() {
+		panic("out of range")
+	}
+
 	token := t.tokens[t.current]
 	t.current++
 	return token
@@ -98,7 +105,6 @@ func (t *Tokens) expectRef() (*PDFReference, error) {
 }
 
 func (t *Tokens) expectArrayElement() (interface{}, error) {
-	// [0 0 R 1 0 R]
 	ref, err := t.expectRef()
 	if err == nil {
 		return ref, nil
