@@ -119,14 +119,16 @@ type PDFDict struct {
 func (d *PDFDict) String() string {
 	builder := strings.Builder{}
 	var keys []string
-	for k, _ := range d.dict {
+	for k := range d.dict {
 		keys = append(keys, k)
 	}
 	sort.Strings(keys)
+	builder.WriteString("<<\n")
 	for _, k := range keys {
 		builder.WriteString(
 			fmt.Sprintln(k, d.dict[k]))
 	}
+	builder.WriteString(">>")
 	return builder.String()
 }
 
@@ -326,6 +328,7 @@ func parseObj(t *Tokens) *PDFObject {
 	obj := &PDFObject{PDFReference: &PDFReference{ref: ref, version: version}, dict: dict}
 	t.mustStr("endobj")
 	fmt.Println(obj)
+	fmt.Println("")
 	return obj
 }
 
