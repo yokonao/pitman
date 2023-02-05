@@ -1,7 +1,9 @@
 test: 
-	go run main.go > tests/tokenize-tmp.txt
-	diff tests/tokenize-output.txt tests/tokenize-tmp.txt
+	go run main.go > tests/tmp.txt
+	diff tests/snapshot.txt tests/tmp.txt
+
+update-snapshot:
+	go run main.go > tests/snapshot.txt
 
 clean:
-	rm tests/tokenize-tmp.txt
-
+	rm tests/tmp.txt
