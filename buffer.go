@@ -1,6 +1,9 @@
 package main
 
-import "strings"
+import (
+	"fmt"
+	"strings"
+)
 
 func isSpace(c byte) bool {
 	switch c {
@@ -60,13 +63,33 @@ func (b *Buffer) readStr() string {
 		if isSpace(c) {
 			break
 		}
-		if c == ']' {
+		// str として許容されない文字列
+		if c == ']' || c == '/' || c == '>' {
 			b.unreadChar()
 			break
 		}
 		builder.WriteByte(c)
 	}
 	return builder.String()
+}
+
+func (b *Buffer) readName() string {
+	builder := strings.Builder{}
+	builder.WriteByte('/')
+	for {
+		c := b.readChar()
+		if !isNameChar(c) {
+			b.unreadChar()
+			break
+		}
+		builder.WriteByte(c)
+	}
+	return builder.String()
+}
+
+// Name として許容される文字列かどうか a-z, A-Z, 0-9, - を確認している
+func isNameChar(c byte) bool {
+	return ('a' <= c && c <= 'z') || ('A' <= c && c <= 'Z' || ('0' <= c && c <= '9')) || c == '-'
 }
 
 func (b *Buffer) toTokenBuffer() []*Token {
@@ -90,7 +113,23 @@ func (b *Buffer) toTokenBuffer() []*Token {
 			res = append(res, newToken(b.readLiteralStr(), true))
 		case '[', ']':
 			res = append(res, newToken(string(c), false))
-
+		case '<':
+			c2 := b.readChar()
+			if c2 == '<' {
+				res = append(res, newToken("<<", false))
+			} else {
+				panic(fmt.Sprintf("unexpected character %c", c2))
+			}
+		case '>':
+			c2 := b.readChar()
+			if c2 == '>' {
+				res = append(res, newToken(">>", false))
+			} else {
+				panic(fmt.Sprintf("unexpected character %c", c2))
+			}
+		case '/':
+			name := b.readName()
+			res = append(res, newToken(name, false))
 		default:
 			if isSpace(c) {
 				continue

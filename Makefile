@@ -12,11 +12,13 @@ test3:
 	diff tests/snapshot3.txt tests/tmp3.txt
 test4:
 	go run $(SOURCE) -path=partial_sample4 > tests/tmp4.txt
+	diff tests/snapshot4.txt tests/tmp4.txt
 
 update-snapshot:
 	go run $(SOURCE) > tests/snapshot1.txt
 	go run $(SOURCE) -path=sample2 > tests/snapshot2.txt
 	go run $(SOURCE) -path=sample3 > tests/snapshot3.txt
+	go run $(SOURCE) -path=partial_sample4 > tests/tmp4.txt
 
 clean:
 	rm tests/tmp*.txt

@@ -71,6 +71,24 @@ func (tb *TokenBuffer) expectNum() (int, error) {
 	return i, nil
 }
 
+func (tb *TokenBuffer) expectBool() (bool, error) {
+	s := tb.readToken()
+	if s.isLiteral {
+		tb.unreadToken()
+		return false, fmt.Errorf("unexpecte token type")
+	}
+
+	switch s.str {
+	case "true":
+		return true, nil
+	case "false":
+		return false, nil
+	default:
+		tb.unreadToken()
+		return false, fmt.Errorf("unexpected string: %s", s.str)
+	}
+}
+
 func (tb *TokenBuffer) mustStr(cmp string) string {
 	s, err := tb.expectStr(cmp)
 	if err != nil {
@@ -88,7 +106,7 @@ func (tb *TokenBuffer) expectStr(cmp string) (string, error) {
 
 	if s.str != cmp {
 		tb.unreadToken()
-		return "", fmt.Errorf("unexpected string: %s", s.str)
+		return "", fmt.Errorf("unexpected string: %s, expected: %s", s.str, cmp)
 	}
 	return s.str, nil
 }
@@ -201,6 +219,11 @@ func parseDictValue(tb *TokenBuffer) interface{} {
 		return i
 	}
 
+	b, err := tb.expectBool()
+	if err == nil {
+		return b
+	}
+
 	arr, err := tb.expectArray()
 	if err == nil {
 		return arr
@@ -246,6 +269,7 @@ func (tb *TokenBuffer) expectDict() (*PDFDict, error) {
 			break
 		}
 		d[name] = parseDictValue(tb)
+		fmt.Println(name, d[name])
 	}
 	tb.mustStr(">>")
 	return &PDFDict{dict: d}, nil
