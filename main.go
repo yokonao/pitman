@@ -3,11 +3,9 @@ package main
 import (
 	"fmt"
 	"os"
-	"strings"
 	"strconv"
+	"strings"
 )
-
-
 
 func isSpace(c byte) bool {
 	switch c {
@@ -26,15 +24,15 @@ func newBuffer(content string) Buffer {
 	return Buffer{content: content}
 }
 
-func (b *Buffer) isEOF()bool{
+func (b *Buffer) isEOF() bool {
 	return b.current >= len(b.content)
 }
 
 func (b *Buffer) readChar() byte {
-	if b.isEOF(){
+	if b.isEOF() {
 		panic("out of range")
 	}
-	
+
 	c := b.content[b.current]
 	b.current++
 	return c
@@ -76,10 +74,10 @@ func (b *Buffer) toTokens() []string {
 	var res []string
 
 	for {
-		if b.isEOF(){
+		if b.isEOF() {
 			break
 		}
-	
+
 		c := b.readChar()
 		switch c {
 		case '%':
@@ -103,70 +101,224 @@ func (b *Buffer) toTokens() []string {
 	return res
 }
 
-type PDFDict struct{
-	// key: literal 
-	// value: PDFDict | PDFNode | Reference | literal | number | array 
-	dict map[string] interface{}
+type PDFArray struct {
+	array []interface{}
 }
 
-type PDFObject struct{
-	ref int
+func (arr *PDFArray) String() string {
+	return fmt.Sprintln(arr.array...)
+}
+
+type PDFDict struct {
+	// key: literal
+	// value: PDFDict | PDFNode | Reference | literal | number | array
+	dict map[string]interface{}
+}
+
+func (d *PDFDict) String() string {
+	builder := strings.Builder{}
+	for k, v := range d.dict {
+		builder.WriteString(
+			fmt.Sprintln(k, v))
+	}
+	return builder.String()
+}
+
+type PDFReference struct {
+	ref     int
 	version int
-	dict PDFDict
+}
+
+func (r *PDFReference) String() string {
+	return fmt.Sprintf("ref: %d, version: %d", r.ref, r.version)
+}
+
+type PDFObject struct {
+	*PDFReference
+	dict *PDFDict
+}
+
+func (obj *PDFObject) String() string {
+	builder := strings.Builder{}
+	builder.WriteString(fmt.Sprintln(obj.PDFReference.String()))
+	builder.WriteString(obj.dict.String())
+	return builder.String()
 }
 
 type Tokens struct {
-	tokens []string
+	tokens  []string
 	current int
 }
 
-func (t *Tokens) readToken()string{
+func (t *Tokens) readToken() string {
 	// TODO out of range
 	token := t.tokens[t.current]
 	t.current++
 	return token
 }
 
-func (t *Tokens) mustNum()int{
-	i, err := strconv.Atoi(t.readToken())
-	if err!= nil{
+func (t *Tokens) unreadToken() {
+	if t.current > 0 {
+		t.current--
+	}
+}
+
+func (t *Tokens) mustNum() int {
+	i, err := t.expectNum()
+	if err != nil {
 		panic(err)
 	}
 	return i
 }
 
-func (t *Tokens) mustStr(cmp string)string{
-	s := t.readToken()
-	if s != cmp{
-		panic("unexpected string'")
+func (t *Tokens) expectNum() (int, error) {
+	i, err := strconv.Atoi(t.readToken())
+	if err != nil {
+		t.unreadToken()
+		return 0, err
+	}
+	return i, nil
+}
+
+func (t *Tokens) mustStr(cmp string) string {
+	s, err := t.expectStr(cmp)
+	if err != nil {
+		panic(err)
 	}
 	return s
 }
 
-func (t *Tokens) mustName()string{
+func (t *Tokens) expectStr(cmp string) (string, error) {
 	s := t.readToken()
-	strings.Has
-	if s != {
-		panic("unexpected string'")
+	if s != cmp {
+		t.unreadToken()
+		return "", fmt.Errorf("unexpected string")
+	}
+	return s, nil
+}
+
+func (t *Tokens) mustName() string {
+	s, err := t.expectName()
+	if err != nil {
+		panic(err)
 	}
 	return s
 }
 
-func parseDict(t *Tokens) *PDFDict{
-	mustStr("<<")
-	
+func (t *Tokens) expectName() (string, error) {
+	s := t.readToken()
+	if !strings.HasPrefix(s, "/") {
+		t.unreadToken()
+		return "", fmt.Errorf("unexpected prefix")
+	}
+	return s, nil
 }
 
-func parse(t *Tokens) []PDFObject{
+func (t *Tokens) expectRef() (*PDFReference, error) {
+	ref, err := t.expectNum()
+	if err != nil {
+		return nil, err
+	}
+
+	version, err := t.expectNum()
+	if err != nil {
+		t.unreadToken()
+		return nil, err
+	}
+
+	_, err = t.expectStr("R")
+	if err != nil {
+		t.unreadToken()
+		t.unreadToken()
+		return nil, err
+	}
+
+	return &PDFReference{ref: ref, version: version}, nil
+}
+
+func (t *Tokens) expectArrayElement() (interface{}, error) {
+	// [0 0 R 1 0 R]
+	return t.expectRef()
+}
+
+func (t *Tokens) expectArray() (*PDFArray, error) {
+	cur := t.current
+	var err error
+	defer func() {
+		if err != nil {
+			t.current = cur
+		}
+	}()
+
+	_, err = t.expectStr("[")
+	if err != nil {
+		return nil, err
+	}
+
+	var arr []interface{}
+	el, err := t.expectArrayElement()
+	if err != nil {
+		return nil, err
+	}
+	arr = append(arr, el)
+
+	_, err = t.expectStr("]")
+	if err != nil {
+		return nil, err
+	}
+	return &PDFArray{array: arr}, nil
+}
+
+func parseDictValue(t *Tokens) interface{} {
+	ref, err := t.expectRef()
+	if err == nil {
+		return ref
+	}
+	i, err := t.expectNum()
+	if err == nil {
+		return i
+	}
+
+	arr, err := t.expectArray()
+	if err == nil {
+		return arr
+	}
+
+	return t.mustName()
+}
+
+func parseDict(t *Tokens) *PDFDict {
+	d := map[string]interface{}{}
+	t.mustStr("<<")
+	for {
+		name, err := t.expectName()
+		if err != nil {
+			break
+		}
+		d[name] = parseDictValue(t)
+	}
+	t.mustStr(">>")
+	return &PDFDict{dict: d}
+}
+
+func parseObj(t *Tokens) *PDFObject {
 	ref := t.mustNum()
 	version := t.mustNum()
 	t.mustStr("obj")
-	//obj := &PDFObject{ref: ref, version: version}
+	dict := parseDict(t)
+	obj := &PDFObject{PDFReference: &PDFReference{ref: ref, version: version}, dict: dict}
+	t.mustStr("endobj")
+	fmt.Println(obj)
+	return obj
+}
 
+func parse(t *Tokens) []*PDFObject {
+	parseObj(t)
+	parseObj(t)
+	parseObj(t)
 
 	return nil
 }
-
 
 func main() {
 	content, err := os.ReadFile("samples/sample1.pdf")
