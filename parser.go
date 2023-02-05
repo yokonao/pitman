@@ -20,6 +20,14 @@ type TokenBuffer struct {
 	current int
 }
 
+func (tb *TokenBuffer) String() string {
+	var arr []string
+	for _, t := range tb.tokens {
+		arr = append(arr, t.str)
+	}
+	return fmt.Sprint(arr)
+}
+
 func (tb *TokenBuffer) isEmpty() bool {
 	return tb.current >= len(tb.tokens)
 }
