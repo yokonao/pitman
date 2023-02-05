@@ -174,6 +174,14 @@ func (obj *PDFObject) String() string {
 	return builder.String()
 }
 
+type PDFTrailer struct {
+	dict *PDFDict
+}
+
+func (t *PDFTrailer) String() string {
+	return fmt.Sprintf("trailer\n%s", t.dict.String())
+}
+
 type Tokens struct {
 	tokens  []string
 	current int
@@ -420,13 +428,17 @@ func parseObj(t *Tokens) *PDFObject {
 }
 
 func parse(t *Tokens) []*PDFObject {
-	parseObj(t)
-	parseObj(t)
-	parseObj(t)
-	parseObj(t)
-	parseObj(t)
-	parseObj(t)
-	parseObj(t)
+	for {
+		_, err := t.expectStr("trailer")
+		if err == nil {
+			dict := parseDict(t)
+			trailer := &PDFTrailer{dict: dict}
+			fmt.Println(trailer)
+			break
+		}
+
+		parseObj(t)
+	}
 
 	return nil
 }
