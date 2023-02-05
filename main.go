@@ -153,16 +153,24 @@ type PDFObject struct {
 	*PDFReference
 	dict   *PDFDict
 	stream *PDFStream
+	array  *PDFArray
 }
 
 func (obj *PDFObject) String() string {
 	builder := strings.Builder{}
 	builder.WriteString(fmt.Sprintln(obj.PDFReference.String()))
-	builder.WriteString(obj.dict.String())
-	if obj.stream != nil {
-		builder.WriteByte('\n')
-		builder.WriteString(obj.stream.String())
+	if obj.dict != nil {
+		builder.WriteString(obj.dict.String())
+		if obj.stream != nil {
+			builder.WriteByte('\n')
+			builder.WriteString(obj.stream.String())
+		}
 	}
+
+	if obj.array != nil {
+		builder.WriteString(obj.array.String())
+	}
+
 	return builder.String()
 }
 
@@ -263,6 +271,10 @@ func (t *Tokens) expectArrayElement() (interface{}, error) {
 	if err == nil {
 		return ref, nil
 	}
+	name, err := t.expectName()
+	if err == nil {
+		return name, nil
+	}
 	return t.expectNum()
 }
 
@@ -320,8 +332,25 @@ func parseDictValue(t *Tokens) interface{} {
 }
 
 func parseDict(t *Tokens) *PDFDict {
+	// ignore error
+	dict, _ := t.expectDict()
+	return dict
+}
+
+func (t *Tokens) expectDict() (*PDFDict, error) {
+	cur := t.current
+	var err error
+	defer func() {
+		if err != nil {
+			t.current = cur
+		}
+	}()
+
 	d := map[string]interface{}{}
-	t.mustStr("<<")
+	_, err = t.expectStr("<<")
+	if err != nil {
+		return nil, err
+	}
 	for {
 		name, err := t.expectName()
 		if err != nil {
@@ -330,7 +359,7 @@ func parseDict(t *Tokens) *PDFDict {
 		d[name] = parseDictValue(t)
 	}
 	t.mustStr(">>")
-	return &PDFDict{dict: d}
+	return &PDFDict{dict: d}, nil
 }
 
 func (t *Tokens) expectStream() (*PDFStream, error) {
@@ -360,13 +389,30 @@ func parseStream(t *Tokens) *PDFStream {
 }
 
 func parseObj(t *Tokens) *PDFObject {
+	var dict *PDFDict
+	var stream *PDFStream
+	var array *PDFArray
+
 	ref := t.mustNum()
 	version := t.mustNum()
 	t.mustStr("obj")
-	dict := parseDict(t)
-	stream := parseStream(t)
+	dict, err := t.expectDict()
 
-	obj := &PDFObject{PDFReference: &PDFReference{ref: ref, version: version}, dict: dict, stream: stream}
+	if err != nil {
+		array, err = t.expectArray()
+		if err != nil {
+			panic(err)
+		}
+	} else {
+		stream = parseStream(t)
+	}
+
+	obj := &PDFObject{
+		PDFReference: &PDFReference{ref: ref, version: version},
+		dict:         dict,
+		stream:       stream,
+		array:        array,
+	}
 	t.mustStr("endobj")
 	fmt.Println(obj)
 	fmt.Println("")
@@ -374,6 +420,8 @@ func parseObj(t *Tokens) *PDFObject {
 }
 
 func parse(t *Tokens) []*PDFObject {
+	parseObj(t)
+	parseObj(t)
 	parseObj(t)
 	parseObj(t)
 	parseObj(t)
