@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"sort"
 	"strconv"
 	"strings"
 )
@@ -117,9 +118,14 @@ type PDFDict struct {
 
 func (d *PDFDict) String() string {
 	builder := strings.Builder{}
-	for k, v := range d.dict {
+	var keys []string
+	for k, _ := range d.dict {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	for _, k := range keys {
 		builder.WriteString(
-			fmt.Sprintln(k, v))
+			fmt.Sprintln(k, d.dict[k]))
 	}
 	return builder.String()
 }
