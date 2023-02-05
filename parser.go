@@ -269,7 +269,6 @@ func (tb *TokenBuffer) expectDict() (*PDFDict, error) {
 			break
 		}
 		d[name] = parseDictValue(tb)
-		fmt.Println(name, d[name])
 	}
 	tb.mustStr(">>")
 	return &PDFDict{dict: d}, nil
