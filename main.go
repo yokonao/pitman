@@ -4,7 +4,10 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"strconv"
 )
+
+
 
 func isSpace(c byte) bool {
 	switch c {
@@ -100,6 +103,70 @@ func (b *Buffer) toTokens() []string {
 	return res
 }
 
+type PDFDict struct{
+	// key: literal 
+	// value: PDFDict | PDFNode | Reference | literal | number | array 
+	dict map[string] interface{}
+}
+
+type PDFObject struct{
+	ref int
+	version int
+	dict PDFDict
+}
+
+type Tokens struct {
+	tokens []string
+	current int
+}
+
+func (t *Tokens) readToken()string{
+	// TODO out of range
+	token := t.tokens[t.current]
+	t.current++
+	return token
+}
+
+func (t *Tokens) mustNum()int{
+	i, err := strconv.Atoi(t.readToken())
+	if err!= nil{
+		panic(err)
+	}
+	return i
+}
+
+func (t *Tokens) mustStr(cmp string)string{
+	s := t.readToken()
+	if s != cmp{
+		panic("unexpected string'")
+	}
+	return s
+}
+
+func (t *Tokens) mustName()string{
+	s := t.readToken()
+	strings.Has
+	if s != {
+		panic("unexpected string'")
+	}
+	return s
+}
+
+func parseDict(t *Tokens) *PDFDict{
+	mustStr("<<")
+	
+}
+
+func parse(t *Tokens) []PDFObject{
+	ref := t.mustNum()
+	version := t.mustNum()
+	t.mustStr("obj")
+	//obj := &PDFObject{ref: ref, version: version}
+
+
+	return nil
+}
+
 
 func main() {
 	content, err := os.ReadFile("samples/sample1.pdf")
@@ -108,7 +175,7 @@ func main() {
 	}
 	b := newBuffer(string(content))
 
-	fmt.Println(b.toTokens())
-
-
+	tokens := &Tokens{tokens: b.toTokens()}
+	fmt.Println(tokens.tokens)
+	parse(tokens)
 }
