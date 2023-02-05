@@ -6,243 +6,264 @@ import (
 	"strings"
 )
 
-type Tokens struct {
-	tokens  []string
+type Token struct {
+	str       string
+	isLiteral bool
+}
+
+func newToken(str string, isLeteral bool) *Token {
+	return &Token{str: str, isLiteral: isLeteral}
+}
+
+type TokenBuffer struct {
+	tokens  []*Token
 	current int
 }
 
-func (t *Tokens) isEmpty() bool {
-	return t.current >= len(t.tokens)
+func (tb *TokenBuffer) isEmpty() bool {
+	return tb.current >= len(tb.tokens)
 }
 
-func (t *Tokens) readToken() string {
-	if t.isEmpty() {
+func (tb *TokenBuffer) readToken() *Token {
+	if tb.isEmpty() {
 		panic("out of range")
 	}
 
-	token := t.tokens[t.current]
-	t.current++
+	token := tb.tokens[tb.current]
+	tb.current++
 	return token
 }
 
-func (t *Tokens) unreadToken() {
-	if t.current > 0 {
-		t.current--
+func (tb *TokenBuffer) unreadToken() {
+	if tb.current > 0 {
+		tb.current--
 	}
 }
 
-func (t *Tokens) mustNum() int {
-	i, err := t.expectNum()
+func (tb *TokenBuffer) mustNum() int {
+	i, err := tb.expectNum()
 	if err != nil {
 		panic(err)
 	}
 	return i
 }
 
-func (t *Tokens) expectNum() (int, error) {
-	i, err := strconv.Atoi(t.readToken())
+func (tb *TokenBuffer) expectNum() (int, error) {
+	s := tb.readToken()
+	if s.isLiteral {
+		panic("unexpecte token type")
+	}
+
+	i, err := strconv.Atoi(s.str)
 	if err != nil {
-		t.unreadToken()
+		tb.unreadToken()
 		return 0, err
 	}
 	return i, nil
 }
 
-func (t *Tokens) mustStr(cmp string) string {
-	s, err := t.expectStr(cmp)
+func (tb *TokenBuffer) mustStr(cmp string) string {
+	s, err := tb.expectStr(cmp)
 	if err != nil {
 		panic(err)
 	}
 	return s
 }
 
-func (t *Tokens) expectStr(cmp string) (string, error) {
-	s := t.readToken()
-	if s != cmp {
-		t.unreadToken()
+func (tb *TokenBuffer) expectStr(cmp string) (string, error) {
+	s := tb.readToken()
+	if s.isLiteral {
+		panic("unexpecte token type")
+	}
+
+	if s.str != cmp {
+		tb.unreadToken()
 		return "", fmt.Errorf("unexpected string: %s", s)
 	}
-	return s, nil
+	return s.str, nil
 }
 
-func (t *Tokens) mustName() string {
-	s, err := t.expectName()
+func (tb *TokenBuffer) mustName() string {
+	s, err := tb.expectName()
 	if err != nil {
 		panic(err)
 	}
 	return s
 }
 
-func (t *Tokens) expectName() (string, error) {
-	s := t.readToken()
-	if !strings.HasPrefix(s, "/") {
-		t.unreadToken()
+func (tb *TokenBuffer) expectName() (string, error) {
+	s := tb.readToken()
+	if s.isLiteral {
+		panic("unexpecte token type")
+	}
+	if !strings.HasPrefix(s.str, "/") {
+		tb.unreadToken()
 		return "", fmt.Errorf("unexpected prefix")
 	}
-	return s, nil
+	return s.str, nil
 }
 
-func (t *Tokens) expectRef() (*PDFReference, error) {
-	ref, err := t.expectNum()
+func (tb *TokenBuffer) expectRef() (*PDFReference, error) {
+	ref, err := tb.expectNum()
 	if err != nil {
 		return nil, err
 	}
 
-	version, err := t.expectNum()
+	version, err := tb.expectNum()
 	if err != nil {
-		t.unreadToken()
+		tb.unreadToken()
 		return nil, err
 	}
 
-	_, err = t.expectStr("R")
+	_, err = tb.expectStr("R")
 	if err != nil {
-		t.unreadToken()
-		t.unreadToken()
+		tb.unreadToken()
+		tb.unreadToken()
 		return nil, err
 	}
 
 	return &PDFReference{ref: ref, version: version}, nil
 }
 
-func (t *Tokens) expectArrayElement() (interface{}, error) {
-	ref, err := t.expectRef()
+func (tb *TokenBuffer) expectArrayElement() (interface{}, error) {
+	ref, err := tb.expectRef()
 	if err == nil {
 		return ref, nil
 	}
-	name, err := t.expectName()
+	name, err := tb.expectName()
 	if err == nil {
 		return name, nil
 	}
-	return t.expectNum()
+	return tb.expectNum()
 }
 
-func (t *Tokens) expectArray() (*PDFArray, error) {
-	cur := t.current
+func (tb *TokenBuffer) expectArray() (*PDFArray, error) {
+	cur := tb.current
 	var err error
 	defer func() {
 		if err != nil {
-			t.current = cur
+			tb.current = cur
 		}
 	}()
 
-	_, err = t.expectStr("[")
+	_, err = tb.expectStr("[")
 	if err != nil {
 		return nil, err
 	}
 
 	var arr []interface{}
 	for {
-		el, err := t.expectArrayElement()
+		el, err := tb.expectArrayElement()
 		if err != nil {
 			break
 		}
 		arr = append(arr, el)
 	}
 
-	_, err = t.expectStr("]")
+	_, err = tb.expectStr("]")
 	if err != nil {
 		return nil, err
 	}
 	return &PDFArray{array: arr}, nil
 }
 
-func parseDictValue(t *Tokens) interface{} {
-	ref, err := t.expectRef()
+func parseDictValue(tb *TokenBuffer) interface{} {
+	ref, err := tb.expectRef()
 	if err == nil {
 		return ref
 	}
-	i, err := t.expectNum()
+	i, err := tb.expectNum()
 	if err == nil {
 		return i
 	}
 
-	arr, err := t.expectArray()
+	arr, err := tb.expectArray()
 	if err == nil {
 		return arr
 	}
 
-	name, err := t.expectName()
+	name, err := tb.expectName()
 	if err == nil {
 		return name
 	}
 
-	return parseDict(t)
+	return parseDict(tb)
 }
 
-func parseDict(t *Tokens) *PDFDict {
+func parseDict(tb *TokenBuffer) *PDFDict {
 	// ignore error
-	dict, _ := t.expectDict()
+	dict, _ := tb.expectDict()
 	return dict
 }
 
-func (t *Tokens) expectDict() (*PDFDict, error) {
-	cur := t.current
+func (tb *TokenBuffer) expectDict() (*PDFDict, error) {
+	cur := tb.current
 	var err error
 	defer func() {
 		if err != nil {
-			t.current = cur
+			tb.current = cur
 		}
 	}()
 
 	d := map[string]interface{}{}
-	_, err = t.expectStr("<<")
+	_, err = tb.expectStr("<<")
 	if err != nil {
 		return nil, err
 	}
 	for {
-		name, err := t.expectName()
+		name, err := tb.expectName()
 		if err != nil {
 			break
 		}
-		d[name] = parseDictValue(t)
+		d[name] = parseDictValue(tb)
 	}
-	t.mustStr(">>")
+	tb.mustStr(">>")
 	return &PDFDict{dict: d}, nil
 }
 
-func (t *Tokens) expectStream() (*PDFStream, error) {
+func (tb *TokenBuffer) expectStream() (*PDFStream, error) {
 	var err error
 
-	_, err = t.expectStr("stream")
+	_, err = tb.expectStr("stream")
 	if err != nil {
 		return nil, err
 	}
 
 	var tokens []string
 	for {
-		t := t.readToken()
-		if t == "endstream" {
+		t := tb.readToken()
+		if !t.isLiteral && t.str == "endstream" {
 			break
 		}
-		tokens = append(tokens, t)
+		tokens = append(tokens, t.str)
 	}
 
 	return &PDFStream{tokens: tokens}, nil
 }
 
-func parseStream(t *Tokens) *PDFStream {
+func parseStream(tb *TokenBuffer) *PDFStream {
 	// ignore error
-	stream, _ := t.expectStream()
+	stream, _ := tb.expectStream()
 	return stream
 }
 
-func parseObj(t *Tokens) *PDFObject {
+func parseObj(tb *TokenBuffer) *PDFObject {
 	var dict *PDFDict
 	var stream *PDFStream
 	var array *PDFArray
 
-	ref := t.mustNum()
-	version := t.mustNum()
-	t.mustStr("obj")
-	dict, err := t.expectDict()
+	ref := tb.mustNum()
+	version := tb.mustNum()
+	tb.mustStr("obj")
+	dict, err := tb.expectDict()
 
 	if err != nil {
-		array, err = t.expectArray()
+		array, err = tb.expectArray()
 		if err != nil {
 			panic(err)
 		}
 	} else {
-		stream = parseStream(t)
+		stream = parseStream(tb)
 	}
 
 	obj := &PDFObject{
@@ -251,13 +272,13 @@ func parseObj(t *Tokens) *PDFObject {
 		stream:       stream,
 		array:        array,
 	}
-	t.mustStr("endobj")
+	tb.mustStr("endobj")
 	return obj
 }
 
-func parseXref(t *Tokens) *PDFXref {
-	i := t.mustNum()
-	j := t.mustNum()
+func parseXref(tb *TokenBuffer) *PDFXref {
+	i := tb.mustNum()
+	j := tb.mustNum()
 
 	if i != 0 {
 		panic("expect 0")
@@ -265,49 +286,49 @@ func parseXref(t *Tokens) *PDFXref {
 
 	xref := make([]string, j)
 	for idx := 0; idx < j; idx++ {
-		offset := t.readToken()
-		_ = t.readToken()
+		offset := tb.readToken()
+		_ = tb.readToken()
 		if idx == 0 {
-			t.mustStr("f")
+			tb.mustStr("f")
 		} else {
-			t.mustStr("n")
+			tb.mustStr("n")
 		}
-		xref[idx] = offset
+		xref[idx] = offset.str
 	}
 	return &PDFXref{xref: xref}
 }
 
-func parse(t *Tokens) *PDFDocument {
+func parse(tb *TokenBuffer) *PDFDocument {
 	doc := &PDFDocument{}
 	var objects []*PDFObject
 	for {
-		if t.isEmpty() {
+		if tb.isEmpty() {
 			break
 		}
 
-		_, err := t.expectStr("trailer")
+		_, err := tb.expectStr("trailer")
 		if err == nil {
-			dict := parseDict(t)
+			dict := parseDict(tb)
 			doc.trailer = &PDFTrailer{dict: dict}
 			continue
 		}
 
-		_, err = t.expectStr("xref")
+		_, err = tb.expectStr("xref")
 		if err == nil {
-			doc.xref = parseXref(t)
+			doc.xref = parseXref(tb)
 			continue
 		}
 
-		_, err = t.expectStr("startxref")
+		_, err = tb.expectStr("startxref")
 		if err == nil {
 			if doc.xref == nil {
 				panic("expect xref")
 			}
-			doc.xref.startxref = t.mustNum()
+			doc.xref.startxref = tb.mustNum()
 			continue
 		}
 
-		objects = append(objects, parseObj(t))
+		objects = append(objects, parseObj(tb))
 	}
 	doc.objects = objects
 	return doc
