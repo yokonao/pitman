@@ -1,0 +1,77 @@
+ref: 1, version: 0
+<<
+/Outlines ref: 2, version: 0
+/Pages ref: 3, version: 0
+/Type /Catalog
+>>
+
+ref: 2, version: 0
+<<
+/Count 0
+/Type /Outlines
+>>
+
+ref: 3, version: 0
+<<
+/Count 1
+/Kids ref: 4, version: 0
+/Type /Pages
+>>
+
+ref: 4, version: 0
+<<
+/Contents ref: 5, version: 0
+/MediaBox 0 0 612 792
+/Parent ref: 3, version: 0
+/Resources <<
+/Font <<
+/F1 ref: 7, version: 0
+/F2 ref: 8, version: 0
+>>
+/ProcSet ref: 6, version: 0
+>>
+/Type /Page
+>>
+
+ref: 5, version: 0
+<<
+/Length 86
+>>
+[BT /F1 48 Tf 0 700 Td 0 Tw 0 Tc Hello Tj 24 Ts Hello Tj 0 Ts /F2 48 Tf $"$$$&$\($* Tj 24 Ts $"$$$&$\($* Tj 0 Ts /F1 24 Tf World Tj 24 Ts World Tj 0 Ts ET]
+
+ref: 6, version: 0
+/PDF/Text
+
+ref: 7, version: 0
+<<
+/BaseFont /Helvetica
+/Encoding /MacRomanEncoding
+/Name /F1
+/Subtype /Type1
+/Type /Font
+>>
+
+ref: 8, version: 0
+<<
+/BaseFont /Ryumin-Light-V
+/DescendantFonts <<
+/CIDSystemInfo <<
+/Ordering Japan1
+/Registry Adobe
+/Supplement 1
+>>
+/Subtype /CIDFontType0
+/Type /Font
+>>
+/Encoding /V
+/Name /F2
+/Subtype /Type0
+/Type /Font
+>>
+
+trailer
+<<
+/Root ref: 1, version: 0
+/Size 8
+>>
+
