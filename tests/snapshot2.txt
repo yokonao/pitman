@@ -38,17 +38,18 @@ ref: 5, version: 0
 ref: 6, version: 0
 /PDF
 
-trailer
-<<
-/Root ref: 1, version: 0
-/Size 7
->>
-
 xref
-startxref 9760 0000000000
+0 0000000000
 1 0000000009
 2 0000000077
 3 0000000125
 4 0000000185
 5 0000000309
 6 0000000954
+trailer
+<<
+/Root ref: 1, version: 0
+/Size 7
+>>
+
+startxref 976

@@ -75,3 +75,4 @@ trailer
 /Size 8
 >>
 
+startxref 0
