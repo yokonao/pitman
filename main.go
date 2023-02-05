@@ -17,18 +17,21 @@ func isSpace(c byte) bool {
 type Buffer struct {
 	content string
 	current int
-	eof     bool
 }
 
 func newBuffer(content string) Buffer {
 	return Buffer{content: content}
 }
 
+func (b *Buffer) isEOF()bool{
+	return b.current >= len(b.content)
+}
+
 func (b *Buffer) readChar() byte {
-	if b.current >= len(b.content) {
-		b.eof = true
-		return ' '
+	if b.isEOF(){
+		panic("out of range")
 	}
+	
 	c := b.content[b.current]
 	b.current++
 	return c
@@ -70,10 +73,11 @@ func (b *Buffer) toTokens() []string {
 	var res []string
 
 	for {
-		c := b.readChar()
-		if b.eof {
+		if b.isEOF(){
 			break
 		}
+	
+		c := b.readChar()
 		switch c {
 		case '%':
 			for {
