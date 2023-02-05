@@ -10,6 +10,8 @@ test2:
 test3:
 	go run $(SOURCE) -path=sample3 > tests/tmp3.txt
 	diff tests/snapshot3.txt tests/tmp3.txt
+test4:
+	go run $(SOURCE) -path=partial_sample4 > tests/tmp4.txt
 
 update-snapshot:
 	go run $(SOURCE) > tests/snapshot1.txt
@@ -17,4 +19,4 @@ update-snapshot:
 	go run $(SOURCE) -path=sample3 > tests/snapshot3.txt
 
 clean:
-	rm tests/tmp.txt
+	rm tests/tmp*.txt
