@@ -15,4 +15,4 @@
 # vendor/
 
 # Test files
-tests/tokenize-tmp.txt
+tests/tmp.txt
