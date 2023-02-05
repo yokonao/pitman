@@ -51,7 +51,8 @@ func (tb *TokenBuffer) mustNum() int {
 func (tb *TokenBuffer) expectNum() (int, error) {
 	s := tb.readToken()
 	if s.isLiteral {
-		panic("unexpecte token type")
+		tb.unreadToken()
+		return 0, fmt.Errorf("unexpecte token type")
 	}
 
 	i, err := strconv.Atoi(s.str)
@@ -73,12 +74,22 @@ func (tb *TokenBuffer) mustStr(cmp string) string {
 func (tb *TokenBuffer) expectStr(cmp string) (string, error) {
 	s := tb.readToken()
 	if s.isLiteral {
-		panic("unexpecte token type")
+		tb.unreadToken()
+		return "", fmt.Errorf("unexpecte token type")
 	}
 
 	if s.str != cmp {
 		tb.unreadToken()
-		return "", fmt.Errorf("unexpected string: %s", s)
+		return "", fmt.Errorf("unexpected string: %s", s.str)
+	}
+	return s.str, nil
+}
+
+func (tb *TokenBuffer) expectLiteral() (string, error) {
+	s := tb.readToken()
+	if !s.isLiteral {
+		tb.unreadToken()
+		return "", fmt.Errorf("unexpecte token type")
 	}
 	return s.str, nil
 }
@@ -94,7 +105,8 @@ func (tb *TokenBuffer) mustName() string {
 func (tb *TokenBuffer) expectName() (string, error) {
 	s := tb.readToken()
 	if s.isLiteral {
-		panic("unexpecte token type")
+		tb.unreadToken()
+		return "", fmt.Errorf("unexpecte token type")
 	}
 	if !strings.HasPrefix(s.str, "/") {
 		tb.unreadToken()
@@ -134,7 +146,11 @@ func (tb *TokenBuffer) expectArrayElement() (interface{}, error) {
 	if err == nil {
 		return name, nil
 	}
-	return tb.expectNum()
+	num, err := tb.expectNum()
+	if err == nil {
+		return num, nil
+	}
+	return tb.expectDict()
 }
 
 func (tb *TokenBuffer) expectArray() (*PDFArray, error) {
@@ -185,6 +201,12 @@ func parseDictValue(tb *TokenBuffer) interface{} {
 	name, err := tb.expectName()
 	if err == nil {
 		return name
+	}
+
+	literalStr, err := tb.expectLiteral()
+
+	if err == nil {
+		return literalStr
 	}
 
 	return parseDict(tb)
@@ -276,7 +298,7 @@ func parseObj(tb *TokenBuffer) *PDFObject {
 	return obj
 }
 
-func parseXref(tb *TokenBuffer) *PDFXref {
+func parseXRef(tb *TokenBuffer) *PDFXRef {
 	i := tb.mustNum()
 	j := tb.mustNum()
 
@@ -295,7 +317,7 @@ func parseXref(tb *TokenBuffer) *PDFXref {
 		}
 		xref[idx] = offset.str
 	}
-	return &PDFXref{xref: xref}
+	return &PDFXRef{xref: xref}
 }
 
 func parse(tb *TokenBuffer) *PDFDocument {
@@ -315,7 +337,7 @@ func parse(tb *TokenBuffer) *PDFDocument {
 
 		_, err = tb.expectStr("xref")
 		if err == nil {
-			doc.xref = parseXref(tb)
+			doc.xref = parseXRef(tb)
 			continue
 		}
 
@@ -324,7 +346,7 @@ func parse(tb *TokenBuffer) *PDFDocument {
 			if doc.xref == nil {
 				panic("expect xref")
 			}
-			doc.xref.startxref = tb.mustNum()
+			doc.startxref = tb.mustNum()
 			continue
 		}
 
