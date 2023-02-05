@@ -141,15 +141,28 @@ func (r *PDFReference) String() string {
 	return fmt.Sprintf("ref: %d, version: %d", r.ref, r.version)
 }
 
+type PDFStream struct {
+	tokens []string
+}
+
+func (s *PDFStream) String() string {
+	return fmt.Sprint(s.tokens)
+}
+
 type PDFObject struct {
 	*PDFReference
-	dict *PDFDict
+	dict   *PDFDict
+	stream *PDFStream
 }
 
 func (obj *PDFObject) String() string {
 	builder := strings.Builder{}
 	builder.WriteString(fmt.Sprintln(obj.PDFReference.String()))
 	builder.WriteString(obj.dict.String())
+	if obj.stream != nil {
+		builder.WriteByte('\n')
+		builder.WriteString(obj.stream.String())
+	}
 	return builder.String()
 }
 
@@ -320,12 +333,40 @@ func parseDict(t *Tokens) *PDFDict {
 	return &PDFDict{dict: d}
 }
 
+func (t *Tokens) expectStream() (*PDFStream, error) {
+	var err error
+
+	_, err = t.expectStr("stream")
+	if err != nil {
+		return nil, err
+	}
+
+	var tokens []string
+	for {
+		t := t.readToken()
+		if t == "endstream" {
+			break
+		}
+		tokens = append(tokens, t)
+	}
+
+	return &PDFStream{tokens: tokens}, nil
+}
+
+func parseStream(t *Tokens) *PDFStream {
+	// ignore error
+	stream, _ := t.expectStream()
+	return stream
+}
+
 func parseObj(t *Tokens) *PDFObject {
 	ref := t.mustNum()
 	version := t.mustNum()
 	t.mustStr("obj")
 	dict := parseDict(t)
-	obj := &PDFObject{PDFReference: &PDFReference{ref: ref, version: version}, dict: dict}
+	stream := parseStream(t)
+
+	obj := &PDFObject{PDFReference: &PDFReference{ref: ref, version: version}, dict: dict, stream: stream}
 	t.mustStr("endobj")
 	fmt.Println(obj)
 	fmt.Println("")
@@ -333,6 +374,7 @@ func parseObj(t *Tokens) *PDFObject {
 }
 
 func parse(t *Tokens) []*PDFObject {
+	parseObj(t)
 	parseObj(t)
 	parseObj(t)
 	parseObj(t)
