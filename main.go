@@ -182,6 +182,21 @@ func (t *PDFTrailer) String() string {
 	return fmt.Sprintf("trailer\n%s", t.dict.String())
 }
 
+type PDFDocument struct {
+	objects []*PDFObject
+	trailer *PDFTrailer
+}
+
+func (doc *PDFDocument) String() string {
+	builder := strings.Builder{}
+	for _, obj := range doc.objects {
+		builder.WriteString(fmt.Sprintln(obj.String()))
+		builder.WriteByte('\n')
+	}
+	builder.WriteString(doc.trailer.String())
+	return builder.String()
+}
+
 type Tokens struct {
 	tokens  []string
 	current int
@@ -422,25 +437,24 @@ func parseObj(t *Tokens) *PDFObject {
 		array:        array,
 	}
 	t.mustStr("endobj")
-	fmt.Println(obj)
-	fmt.Println("")
 	return obj
 }
 
-func parse(t *Tokens) []*PDFObject {
+func parse(t *Tokens) *PDFDocument {
+	var objects []*PDFObject
+	var trailer *PDFTrailer
 	for {
 		_, err := t.expectStr("trailer")
 		if err == nil {
 			dict := parseDict(t)
-			trailer := &PDFTrailer{dict: dict}
-			fmt.Println(trailer)
+			trailer = &PDFTrailer{dict: dict}
 			break
 		}
 
-		parseObj(t)
+		objects = append(objects, parseObj(t))
 	}
 
-	return nil
+	return &PDFDocument{objects: objects, trailer: trailer}
 }
 
 func main() {
@@ -452,5 +466,6 @@ func main() {
 
 	tokens := &Tokens{tokens: b.toTokens()}
 	fmt.Println(tokens.tokens)
-	parse(tokens)
+	doc := parse(tokens)
+	fmt.Println(doc)
 }
