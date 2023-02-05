@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"sort"
 	"strconv"
 	"strings"
 )
@@ -117,10 +118,17 @@ type PDFDict struct {
 
 func (d *PDFDict) String() string {
 	builder := strings.Builder{}
-	for k, v := range d.dict {
-		builder.WriteString(
-			fmt.Sprintln(k, v))
+	var keys []string
+	for k := range d.dict {
+		keys = append(keys, k)
 	}
+	sort.Strings(keys)
+	builder.WriteString("<<\n")
+	for _, k := range keys {
+		builder.WriteString(
+			fmt.Sprintln(k, d.dict[k]))
+	}
+	builder.WriteString(">>")
 	return builder.String()
 }
 
@@ -133,15 +141,59 @@ func (r *PDFReference) String() string {
 	return fmt.Sprintf("ref: %d, version: %d", r.ref, r.version)
 }
 
+type PDFStream struct {
+	tokens []string
+}
+
+func (s *PDFStream) String() string {
+	return fmt.Sprint(s.tokens)
+}
+
 type PDFObject struct {
 	*PDFReference
-	dict *PDFDict
+	dict   *PDFDict
+	stream *PDFStream
+	array  *PDFArray
 }
 
 func (obj *PDFObject) String() string {
 	builder := strings.Builder{}
 	builder.WriteString(fmt.Sprintln(obj.PDFReference.String()))
-	builder.WriteString(obj.dict.String())
+	if obj.dict != nil {
+		builder.WriteString(obj.dict.String())
+		if obj.stream != nil {
+			builder.WriteByte('\n')
+			builder.WriteString(obj.stream.String())
+		}
+	}
+
+	if obj.array != nil {
+		builder.WriteString(obj.array.String())
+	}
+
+	return builder.String()
+}
+
+type PDFTrailer struct {
+	dict *PDFDict
+}
+
+func (t *PDFTrailer) String() string {
+	return fmt.Sprintf("trailer\n%s", t.dict.String())
+}
+
+type PDFDocument struct {
+	objects []*PDFObject
+	trailer *PDFTrailer
+}
+
+func (doc *PDFDocument) String() string {
+	builder := strings.Builder{}
+	for _, obj := range doc.objects {
+		builder.WriteString(fmt.Sprintln(obj.String()))
+		builder.WriteByte('\n')
+	}
+	builder.WriteString(doc.trailer.String())
 	return builder.String()
 }
 
@@ -242,6 +294,10 @@ func (t *Tokens) expectArrayElement() (interface{}, error) {
 	if err == nil {
 		return ref, nil
 	}
+	name, err := t.expectName()
+	if err == nil {
+		return name, nil
+	}
 	return t.expectNum()
 }
 
@@ -299,8 +355,25 @@ func parseDictValue(t *Tokens) interface{} {
 }
 
 func parseDict(t *Tokens) *PDFDict {
+	// ignore error
+	dict, _ := t.expectDict()
+	return dict
+}
+
+func (t *Tokens) expectDict() (*PDFDict, error) {
+	cur := t.current
+	var err error
+	defer func() {
+		if err != nil {
+			t.current = cur
+		}
+	}()
+
 	d := map[string]interface{}{}
-	t.mustStr("<<")
+	_, err = t.expectStr("<<")
+	if err != nil {
+		return nil, err
+	}
 	for {
 		name, err := t.expectName()
 		if err != nil {
@@ -309,27 +382,79 @@ func parseDict(t *Tokens) *PDFDict {
 		d[name] = parseDictValue(t)
 	}
 	t.mustStr(">>")
-	return &PDFDict{dict: d}
+	return &PDFDict{dict: d}, nil
+}
+
+func (t *Tokens) expectStream() (*PDFStream, error) {
+	var err error
+
+	_, err = t.expectStr("stream")
+	if err != nil {
+		return nil, err
+	}
+
+	var tokens []string
+	for {
+		t := t.readToken()
+		if t == "endstream" {
+			break
+		}
+		tokens = append(tokens, t)
+	}
+
+	return &PDFStream{tokens: tokens}, nil
+}
+
+func parseStream(t *Tokens) *PDFStream {
+	// ignore error
+	stream, _ := t.expectStream()
+	return stream
 }
 
 func parseObj(t *Tokens) *PDFObject {
+	var dict *PDFDict
+	var stream *PDFStream
+	var array *PDFArray
+
 	ref := t.mustNum()
 	version := t.mustNum()
 	t.mustStr("obj")
-	dict := parseDict(t)
-	obj := &PDFObject{PDFReference: &PDFReference{ref: ref, version: version}, dict: dict}
+	dict, err := t.expectDict()
+
+	if err != nil {
+		array, err = t.expectArray()
+		if err != nil {
+			panic(err)
+		}
+	} else {
+		stream = parseStream(t)
+	}
+
+	obj := &PDFObject{
+		PDFReference: &PDFReference{ref: ref, version: version},
+		dict:         dict,
+		stream:       stream,
+		array:        array,
+	}
 	t.mustStr("endobj")
-	fmt.Println(obj)
 	return obj
 }
 
-func parse(t *Tokens) []*PDFObject {
-	parseObj(t)
-	parseObj(t)
-	parseObj(t)
-	parseObj(t)
+func parse(t *Tokens) *PDFDocument {
+	var objects []*PDFObject
+	var trailer *PDFTrailer
+	for {
+		_, err := t.expectStr("trailer")
+		if err == nil {
+			dict := parseDict(t)
+			trailer = &PDFTrailer{dict: dict}
+			break
+		}
 
-	return nil
+		objects = append(objects, parseObj(t))
+	}
+
+	return &PDFDocument{objects: objects, trailer: trailer}
 }
 
 func main() {
@@ -341,5 +466,6 @@ func main() {
 
 	tokens := &Tokens{tokens: b.toTokens()}
 	fmt.Println(tokens.tokens)
-	parse(tokens)
+	doc := parse(tokens)
+	fmt.Println(doc)
 }
