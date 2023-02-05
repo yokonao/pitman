@@ -298,7 +298,7 @@ func parseObj(tb *TokenBuffer) *PDFObject {
 	return obj
 }
 
-func parseXref(tb *TokenBuffer) *PDFXref {
+func parseXRef(tb *TokenBuffer) *PDFXRef {
 	i := tb.mustNum()
 	j := tb.mustNum()
 
@@ -317,7 +317,7 @@ func parseXref(tb *TokenBuffer) *PDFXref {
 		}
 		xref[idx] = offset.str
 	}
-	return &PDFXref{xref: xref}
+	return &PDFXRef{xref: xref}
 }
 
 func parse(tb *TokenBuffer) *PDFDocument {
@@ -337,7 +337,7 @@ func parse(tb *TokenBuffer) *PDFDocument {
 
 		_, err = tb.expectStr("xref")
 		if err == nil {
-			doc.xref = parseXref(tb)
+			doc.xref = parseXRef(tb)
 			continue
 		}
 
@@ -346,7 +346,7 @@ func parse(tb *TokenBuffer) *PDFDocument {
 			if doc.xref == nil {
 				panic("expect xref")
 			}
-			doc.xref.startxref = tb.mustNum()
+			doc.startxref = tb.mustNum()
 			continue
 		}
 
