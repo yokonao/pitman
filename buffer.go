@@ -69,8 +69,8 @@ func (b *Buffer) readStr() string {
 	return builder.String()
 }
 
-func (b *Buffer) toTokens() []string {
-	var res []string
+func (b *Buffer) toTokenBuffer() []*Token {
+	var res []*Token
 
 	for {
 		if b.isEOF() {
@@ -87,16 +87,16 @@ func (b *Buffer) toTokens() []string {
 				}
 			}
 		case '(':
-			res = append(res, b.readLiteralStr())
+			res = append(res, newToken(b.readLiteralStr(), true))
 		case '[', ']':
-			res = append(res, string(c))
+			res = append(res, newToken(string(c), false))
 
 		default:
 			if isSpace(c) {
 				continue
 			}
 			b.unreadChar()
-			res = append(res, b.readStr())
+			res = append(res, newToken(b.readStr(), false))
 		}
 	}
 
