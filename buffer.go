@@ -60,6 +60,10 @@ func (b *Buffer) readStr() string {
 		if isSpace(c) {
 			break
 		}
+		if c == ']' {
+			b.unreadChar()
+			break
+		}
 		builder.WriteByte(c)
 	}
 	return builder.String()
@@ -84,6 +88,9 @@ func (b *Buffer) toTokens() []string {
 			}
 		case '(':
 			res = append(res, b.readLiteralStr())
+		case '[', ']':
+			res = append(res, string(c))
+
 		default:
 			if isSpace(c) {
 				continue
