@@ -83,12 +83,29 @@ type PDFTrailer struct {
 }
 
 func (t *PDFTrailer) String() string {
-	return fmt.Sprintf("trailer\n%s", t.dict.String())
+	return fmt.Sprintf("trailer\n%s\n\n", t.dict.String())
+}
+
+type PDFXref struct {
+	startxref int
+	xref      []string
+}
+
+func (xref *PDFXref) String() string {
+	builder := strings.Builder{}
+	builder.WriteString("xref\n")
+	builder.WriteString(fmt.Sprintf("startxref %d", xref.startxref))
+	for i := 0; i < len(xref.xref); i++ {
+		builder.WriteString(fmt.Sprintln(i, xref.xref[i]))
+
+	}
+	return builder.String()
 }
 
 type PDFDocument struct {
 	objects []*PDFObject
 	trailer *PDFTrailer
+	xref    *PDFXref
 }
 
 func (doc *PDFDocument) String() string {
@@ -98,5 +115,9 @@ func (doc *PDFDocument) String() string {
 		builder.WriteByte('\n')
 	}
 	builder.WriteString(doc.trailer.String())
+
+	if doc.xref != nil {
+		builder.WriteString(doc.xref.String())
+	}
 	return builder.String()
 }

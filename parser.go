@@ -255,19 +255,60 @@ func parseObj(t *Tokens) *PDFObject {
 	return obj
 }
 
+func parseXref(t *Tokens) *PDFXref {
+	i := t.mustNum()
+	j := t.mustNum()
+
+	if i != 0 {
+		panic("expect 0")
+	}
+
+	xref := make([]string, j)
+	for idx := 0; idx < j; idx++ {
+		offset := t.readToken()
+		_ = t.readToken()
+		if idx == 0 {
+			t.mustStr("f")
+		} else {
+			t.mustStr("n")
+		}
+		xref[idx] = offset
+	}
+	return &PDFXref{xref: xref}
+}
+
 func parse(t *Tokens) *PDFDocument {
+	doc := &PDFDocument{}
 	var objects []*PDFObject
-	var trailer *PDFTrailer
 	for {
+		if t.isEmpty() {
+			break
+		}
+
 		_, err := t.expectStr("trailer")
 		if err == nil {
 			dict := parseDict(t)
-			trailer = &PDFTrailer{dict: dict}
-			break
+			doc.trailer = &PDFTrailer{dict: dict}
+			continue
+		}
+
+		_, err = t.expectStr("xref")
+		if err == nil {
+			doc.xref = parseXref(t)
+			continue
+		}
+
+		_, err = t.expectStr("startxref")
+		if err == nil {
+			if doc.xref == nil {
+				panic("expect xref")
+			}
+			doc.xref.startxref = t.mustNum()
+			continue
 		}
 
 		objects = append(objects, parseObj(t))
 	}
-
-	return &PDFDocument{objects: objects, trailer: trailer}
+	doc.objects = objects
+	return doc
 }
