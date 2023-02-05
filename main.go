@@ -3,7 +3,16 @@ package main
 import (
 	"fmt"
 	"os"
+	"strings"
 )
+
+func isSpace(c byte) bool {
+	switch c {
+	case '\n', '\r', ' ':
+		return true
+	}
+	return false
+}
 
 type Buffer struct {
 	content string
@@ -14,62 +23,77 @@ func newBuffer(content string) Buffer {
 	return Buffer{content: content}
 }
 
-func (b *Buffer) toChar(n int) byte {
-	return b.content[b.current+n]
+func (b *Buffer) isEOF()bool{
+	return b.current >= len(b.content)
 }
 
-func (b *Buffer) toStr(n int) string {
-	return b.content[b.current : b.current+n]
+func (b *Buffer) readChar() byte {
+	if b.isEOF(){
+		panic("out of range")
+	}
+	
+	c := b.content[b.current]
+	b.current++
+	return c
 }
 
-func (b *Buffer) next(n int) {
-	b.current += n
+func (b *Buffer) unreadChar() {
+	if b.current > 0 {
+		b.current--
+	}
+}
+
+func (b *Buffer) readLiteralStr() string {
+	builder := strings.Builder{}
+	for {
+		c := b.readChar()
+		// TODO "(())"のパターンを考慮する必要がある
+		if c == ')' {
+			break
+		} else {
+			builder.WriteByte(c)
+		}
+	}
+	return builder.String()
+}
+
+func (b *Buffer) readStr() string {
+	builder := strings.Builder{}
+	for {
+		c := b.readChar()
+		if isSpace(c) {
+			break
+		}
+		builder.WriteByte(c)
+	}
+	return builder.String()
 }
 
 func (b *Buffer) toTokens() []string {
 	var res []string
-	l := len(b.content)
 
 	for {
-		if b.current == l {
+		if b.isEOF(){
 			break
 		}
-
-		if b.toChar(0) == '%' {
+	
+		c := b.readChar()
+		switch c {
+		case '%':
 			for {
-				b.next(1)
-				if b.toChar(0) == '\n' {
-					b.next(1)
+				t := b.readChar()
+				if t == '\n' {
 					break
 				}
 			}
-		} else if b.toChar(0) == ' ' || b.toChar(0) == '\n' {
-			b.next(1)
-		} else if b.toChar(0) == '(' {
-			b.next(1)
-			i := 0
-			for {
-				if b.toChar(i) == ')' {
-					if i == 0 {
-						res = append(res, "")
-					} else {
-						res = append(res, b.toStr(i))
-						b.next(i + 1)
-					}
-					break
-				}
-				i++
+		case '(':
+			res = append(res, b.readLiteralStr())
+		default:
+			if isSpace(c) {
+				continue
 			}
-		} else {
-			i := 1
-			for {
-				if b.content[b.current+i] == ' ' || b.content[b.current+i] == '\n' {
-					res = append(res, b.toStr(i))
-					b.next(i)
-					break
-				}
-				i++
-			}
+			b.unreadChar()
+			res = append(res, b.readStr())
 		}
 	}
 
@@ -79,7 +103,7 @@ func (b *Buffer) toTokens() []string {
 var b Buffer
 
 func main() {
-	content, err := os.ReadFile("samples/sample.pdf")
+	content, err := os.ReadFile("samples/sample1.pdf")
 	if err != nil {
 		panic(err)
 	}
