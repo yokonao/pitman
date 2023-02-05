@@ -60,7 +60,7 @@ func (t *Tokens) expectStr(cmp string) (string, error) {
 	s := t.readToken()
 	if s != cmp {
 		t.unreadToken()
-		return "", fmt.Errorf("unexpected string")
+		return "", fmt.Errorf("unexpected string: %s", s)
 	}
 	return s, nil
 }
