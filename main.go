@@ -290,7 +290,12 @@ func parseDictValue(t *Tokens) interface{} {
 		return arr
 	}
 
-	return t.mustName()
+	name, err := t.expectName()
+	if err == nil {
+		return name
+	}
+
+	return parseDict(t)
 }
 
 func parseDict(t *Tokens) *PDFDict {
@@ -319,6 +324,7 @@ func parseObj(t *Tokens) *PDFObject {
 }
 
 func parse(t *Tokens) []*PDFObject {
+	parseObj(t)
 	parseObj(t)
 	parseObj(t)
 	parseObj(t)
