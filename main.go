@@ -106,7 +106,7 @@ type PDFArray struct {
 }
 
 func (arr *PDFArray) String() string {
-	return fmt.Sprintln(arr.array...)
+	return fmt.Sprint(arr.array...)
 }
 
 type PDFDict struct {
@@ -238,7 +238,11 @@ func (t *Tokens) expectRef() (*PDFReference, error) {
 
 func (t *Tokens) expectArrayElement() (interface{}, error) {
 	// [0 0 R 1 0 R]
-	return t.expectRef()
+	ref, err := t.expectRef()
+	if err == nil {
+		return ref, nil
+	}
+	return t.expectNum()
 }
 
 func (t *Tokens) expectArray() (*PDFArray, error) {
@@ -256,11 +260,13 @@ func (t *Tokens) expectArray() (*PDFArray, error) {
 	}
 
 	var arr []interface{}
-	el, err := t.expectArrayElement()
-	if err != nil {
-		return nil, err
+	for {
+		el, err := t.expectArrayElement()
+		if err != nil {
+			break
+		}
+		arr = append(arr, el)
 	}
-	arr = append(arr, el)
 
 	_, err = t.expectStr("]")
 	if err != nil {
