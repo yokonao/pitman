@@ -100,14 +100,15 @@ func (b *Buffer) toTokens() []string {
 	return res
 }
 
-var b Buffer
 
 func main() {
 	content, err := os.ReadFile("samples/sample1.pdf")
 	if err != nil {
 		panic(err)
 	}
-	b = newBuffer(string(content))
+	b := newBuffer(string(content))
 
 	fmt.Println(b.toTokens())
+
+
 }
