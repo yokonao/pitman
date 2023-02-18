@@ -92,7 +92,7 @@ func (tb *TokenBuffer) expectBool() (bool, error) {
 	s := tb.readToken()
 	if s.isLiteral() {
 		tb.unreadToken()
-		return false, fmt.Errorf("unexpecte token type")
+		return false, fmt.Errorf("unexpected token type")
 	}
 
 	switch s.str {
