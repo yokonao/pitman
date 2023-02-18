@@ -6,13 +6,26 @@ import (
 	"strings"
 )
 
+type TokenType int
+
+const (
+	UnknownToken TokenType = iota
+	RegularToken
+	LiteralToken
+	StreamToken
+)
+
 type Token struct {
 	str       string
-	isLiteral bool
+	tokenType TokenType
 }
 
-func newToken(str string, isLeteral bool) *Token {
-	return &Token{str: str, isLiteral: isLeteral}
+func newToken(str string, tokenType TokenType) *Token {
+	return &Token{str: str, tokenType: tokenType}
+}
+
+func (t *Token) isLiteral() bool {
+	return t.tokenType == LiteralToken
 }
 
 type TokenBuffer struct {
@@ -58,7 +71,7 @@ func (tb *TokenBuffer) mustNum() int {
 
 func (tb *TokenBuffer) expectNum() (int, error) {
 	s := tb.readToken()
-	if s.isLiteral {
+	if s.isLiteral() {
 		tb.unreadToken()
 		return 0, fmt.Errorf("unexpecte token type")
 	}
@@ -73,7 +86,7 @@ func (tb *TokenBuffer) expectNum() (int, error) {
 
 func (tb *TokenBuffer) expectBool() (bool, error) {
 	s := tb.readToken()
-	if s.isLiteral {
+	if s.isLiteral() {
 		tb.unreadToken()
 		return false, fmt.Errorf("unexpecte token type")
 	}
@@ -99,7 +112,7 @@ func (tb *TokenBuffer) mustStr(cmp string) string {
 
 func (tb *TokenBuffer) expectStr(cmp string) (string, error) {
 	s := tb.readToken()
-	if s.isLiteral {
+	if s.isLiteral() {
 		tb.unreadToken()
 		return "", fmt.Errorf("unexpecte token type")
 	}
@@ -113,7 +126,7 @@ func (tb *TokenBuffer) expectStr(cmp string) (string, error) {
 
 func (tb *TokenBuffer) expectLiteral() (string, error) {
 	s := tb.readToken()
-	if !s.isLiteral {
+	if !s.isLiteral() {
 		tb.unreadToken()
 		return "", fmt.Errorf("unexpecte token type")
 	}
@@ -130,7 +143,7 @@ func (tb *TokenBuffer) mustName() string {
 
 func (tb *TokenBuffer) expectName() (string, error) {
 	s := tb.readToken()
-	if s.isLiteral {
+	if s.isLiteral() {
 		tb.unreadToken()
 		return "", fmt.Errorf("unexpecte token type")
 	}
@@ -285,7 +298,7 @@ func (tb *TokenBuffer) expectStream() (*PDFStream, error) {
 	var tokens []string
 	for {
 		t := tb.readToken()
-		if !t.isLiteral && t.str == "endstream" {
+		if !t.isLiteral() && t.str == "endstream" {
 			break
 		}
 		tokens = append(tokens, t.str)
