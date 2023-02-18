@@ -18,7 +18,7 @@ func isDelemiterChar(c byte) bool {
 }
 func isWhiteSpaceChar(c byte) bool {
 	switch c {
-	case 0, '\t', '\n', 12, '\r', ' ': // 12 = FormFeed
+	case 0, '\t', '\n', 12, '\r', ' ': // 12 = 改ページ
 		return true
 	default:
 		return false
