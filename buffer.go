@@ -110,32 +110,32 @@ func (b *Buffer) toTokenBuffer() []*Token {
 				}
 			}
 		case '(':
-			res = append(res, newToken(b.readLiteralStr(), true))
+			res = append(res, newToken(b.readLiteralStr(), LiteralToken))
 		case '[', ']':
-			res = append(res, newToken(string(c), false))
+			res = append(res, newToken(string(c), RegularToken))
 		case '<':
 			c2 := b.readChar()
 			if c2 == '<' {
-				res = append(res, newToken("<<", false))
+				res = append(res, newToken("<<", RegularToken))
 			} else {
 				panic(fmt.Sprintf("unexpected character %c", c2))
 			}
 		case '>':
 			c2 := b.readChar()
 			if c2 == '>' {
-				res = append(res, newToken(">>", false))
+				res = append(res, newToken(">>", RegularToken))
 			} else {
 				panic(fmt.Sprintf("unexpected character %c", c2))
 			}
 		case '/':
 			name := b.readName()
-			res = append(res, newToken(name, false))
+			res = append(res, newToken(name, RegularToken))
 		default:
 			if isSpace(c) {
 				continue
 			}
 			b.unreadChar()
-			res = append(res, newToken(b.readStr(), false))
+			res = append(res, newToken(b.readStr(), RegularToken))
 		}
 	}
 
