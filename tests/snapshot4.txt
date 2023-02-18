@@ -1,0 +1,15 @@
+[1 0 obj << /Type /Catalog /Pages 2 0 R /Lang en-GB /StructTreeRoot 10 0 R /MarkInfo << /Marked true >> /Metadata 26 0 R /ViewerPreferences 27 0 R >> endobj]
+ref: 1, version: 0
+<<
+/Lang en-GB
+/MarkInfo <<
+/Marked true
+>>
+/Metadata ref: 26, version: 0
+/Pages ref: 2, version: 0
+/StructTreeRoot ref: 10, version: 0
+/Type /Catalog
+/ViewerPreferences ref: 27, version: 0
+>>
+
+startxref 0

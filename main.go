@@ -17,6 +17,7 @@ func main() {
 	b := newBuffer(string(content))
 
 	tokens := &TokenBuffer{tokens: b.toTokenBuffer()}
+	fmt.Println(tokens)
 	doc := parse(tokens)
 	fmt.Print(doc)
 }

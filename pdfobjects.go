@@ -116,7 +116,9 @@ func (doc *PDFDocument) String() string {
 	if doc.xref != nil {
 		builder.WriteString(doc.xref.String())
 	}
-	builder.WriteString(doc.trailer.String())
+	if doc.trailer != nil {
+		builder.WriteString(doc.trailer.String())
+	}
 	builder.WriteString(fmt.Sprintf("startxref %d", doc.startxref))
 	return builder.String()
 }
