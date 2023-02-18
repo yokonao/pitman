@@ -12,6 +12,7 @@ const (
 	UnknownToken TokenType = iota
 	RegularToken
 	LiteralToken
+	HexToken
 	StreamToken
 )
 
@@ -26,6 +27,10 @@ func newToken(str string, tokenType TokenType) *Token {
 
 func (t *Token) isLiteral() bool {
 	return t.tokenType == LiteralToken
+}
+
+func (t *Token) isHex() bool {
+	return t.tokenType == HexToken
 }
 
 func (t *Token) isStream() bool {
@@ -137,6 +142,15 @@ func (tb *TokenBuffer) expectLiteral() (string, error) {
 	return s.str, nil
 }
 
+func (tb *TokenBuffer) expectHex() (string, error) {
+	s := tb.readToken()
+	if !s.isHex() {
+		tb.unreadToken()
+		return "", fmt.Errorf("unexpecte token type")
+	}
+	return s.str, nil
+}
+
 func (tb *TokenBuffer) mustName() string {
 	s, err := tb.expectName()
 	if err != nil {
@@ -192,6 +206,11 @@ func (tb *TokenBuffer) expectArrayElement() (interface{}, error) {
 	num, err := tb.expectNum()
 	if err == nil {
 		return num, nil
+	}
+
+	hex, err := tb.expectHex()
+	if err == nil {
+		return hex, nil
 	}
 	return tb.expectDict()
 }

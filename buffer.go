@@ -87,6 +87,22 @@ func (b *Buffer) readName() string {
 	return builder.String()
 }
 
+func (b *Buffer) readHex() string {
+	pos := b.current
+	for {
+		if pos >= len(b.content) {
+			panic("out of range")
+		}
+		if b.content[pos] == '>' {
+			break
+		}
+		pos++
+	}
+	res := b.content[b.current:pos]
+	b.current = pos + 1
+	return res
+}
+
 func (b *Buffer) readStream() string {
 	endStr := "endstream"
 	pos := b.current
@@ -135,7 +151,7 @@ func (b *Buffer) toTokenBuffer() []*Token {
 			if c2 == '<' {
 				res = append(res, newToken("<<", RegularToken))
 			} else {
-				panic(fmt.Sprintf("unexpected character %c", c2))
+				res = append(res, newToken(b.readHex(), HexToken))
 			}
 		case '>':
 			c2 := b.readChar()
