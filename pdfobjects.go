@@ -46,11 +46,11 @@ func (r *PDFReference) String() string {
 }
 
 type PDFStream struct {
-	tokens []string
+	token string
 }
 
 func (s *PDFStream) String() string {
-	return fmt.Sprint(s.tokens)
+	return fmt.Sprint(s.token)
 }
 
 type PDFObject struct {

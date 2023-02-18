@@ -87,6 +87,23 @@ func (b *Buffer) readName() string {
 	return builder.String()
 }
 
+func (b *Buffer) readStream() string {
+	endStr := "endstream"
+	pos := b.current
+	for {
+		if pos+len(endStr) >= len(b.content) {
+			panic("out of range")
+		}
+		if b.content[pos:pos+len(endStr)] == endStr {
+			break
+		}
+		pos++
+	}
+	res := b.content[b.current:pos]
+	b.current = pos + len(endStr)
+	return res
+}
+
 // Name として許容される文字列かどうか a-z, A-Z, 0-9, - を確認している
 func isNameChar(c byte) bool {
 	return ('a' <= c && c <= 'z') || ('A' <= c && c <= 'Z' || ('0' <= c && c <= '9')) || c == '-'
@@ -135,7 +152,13 @@ func (b *Buffer) toTokenBuffer() []*Token {
 				continue
 			}
 			b.unreadChar()
-			res = append(res, newToken(b.readStr(), RegularToken))
+
+			s := b.readStr()
+			if s == "stream" {
+				res = append(res, newToken(b.readStream(), StreamToken))
+			} else {
+				res = append(res, newToken(s, RegularToken))
+			}
 		}
 	}
 
