@@ -28,6 +28,10 @@ func (t *Token) isLiteral() bool {
 	return t.tokenType == LiteralToken
 }
 
+func (t *Token) isStream() bool {
+	return t.tokenType == StreamToken
+}
+
 type TokenBuffer struct {
 	tokens  []*Token
 	current int
@@ -288,23 +292,14 @@ func (tb *TokenBuffer) expectDict() (*PDFDict, error) {
 }
 
 func (tb *TokenBuffer) expectStream() (*PDFStream, error) {
-	var err error
+	tok := tb.readToken()
+	if !tok.isStream() {
+		tb.unreadToken()
+		return nil, fmt.Errorf("unexpecte token type")
 
-	_, err = tb.expectStr("stream")
-	if err != nil {
-		return nil, err
 	}
+	return &PDFStream{token: tok.str}, nil
 
-	var tokens []string
-	for {
-		t := tb.readToken()
-		if !t.isLiteral() && t.str == "endstream" {
-			break
-		}
-		tokens = append(tokens, t.str)
-	}
-
-	return &PDFStream{tokens: tokens}, nil
 }
 
 func parseStream(tb *TokenBuffer) *PDFStream {
