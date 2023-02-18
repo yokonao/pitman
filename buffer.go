@@ -106,7 +106,7 @@ func (b *Buffer) readStream() string {
 
 // Name として許容される文字列かどうか a-z, A-Z, 0-9, - を確認している
 func isNameChar(c byte) bool {
-	return ('a' <= c && c <= 'z') || ('A' <= c && c <= 'Z' || ('0' <= c && c <= '9')) || c == '-'
+	return isRegularChar(c)
 }
 
 func (b *Buffer) toTokenBuffer() []*Token {
