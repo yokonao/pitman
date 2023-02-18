@@ -82,7 +82,7 @@ func (tb *TokenBuffer) expectNum() (int, error) {
 	s := tb.readToken()
 	if s.isLiteral() {
 		tb.unreadToken()
-		return 0, fmt.Errorf("unexpecte token type")
+		return 0, fmt.Errorf("unexpected token type")
 	}
 
 	i, err := strconv.Atoi(s.str)
@@ -123,7 +123,7 @@ func (tb *TokenBuffer) expectStr(cmp string) (string, error) {
 	s := tb.readToken()
 	if s.isLiteral() {
 		tb.unreadToken()
-		return "", fmt.Errorf("unexpecte token type")
+		return "", fmt.Errorf("unexpected token type")
 	}
 
 	if s.str != cmp {
@@ -137,7 +137,7 @@ func (tb *TokenBuffer) expectLiteral() (string, error) {
 	s := tb.readToken()
 	if !s.isLiteral() {
 		tb.unreadToken()
-		return "", fmt.Errorf("unexpecte token type")
+		return "", fmt.Errorf("unexpected token type")
 	}
 	return s.str, nil
 }
@@ -146,7 +146,7 @@ func (tb *TokenBuffer) expectHex() (string, error) {
 	s := tb.readToken()
 	if !s.isHex() {
 		tb.unreadToken()
-		return "", fmt.Errorf("unexpecte token type")
+		return "", fmt.Errorf("unexpected token type")
 	}
 	return s.str, nil
 }
@@ -163,7 +163,7 @@ func (tb *TokenBuffer) expectName() (string, error) {
 	s := tb.readToken()
 	if s.isLiteral() {
 		tb.unreadToken()
-		return "", fmt.Errorf("unexpecte token type")
+		return "", fmt.Errorf("unexpected token type")
 	}
 	if !strings.HasPrefix(s.str, "/") {
 		tb.unreadToken()
@@ -314,7 +314,7 @@ func (tb *TokenBuffer) expectStream() (*PDFStream, error) {
 	tok := tb.readToken()
 	if !tok.isStream() {
 		tb.unreadToken()
-		return nil, fmt.Errorf("unexpecte token type")
+		return nil, fmt.Errorf("unexpected token type")
 
 	}
 	return &PDFStream{token: tok.str}, nil
